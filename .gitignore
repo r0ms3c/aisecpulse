@@ -24,6 +24,7 @@ env/
 
 # Logs & reports (generated at runtime)
 logs/*.json
+logs/*.log
 reports/report.html
 
 # OS
