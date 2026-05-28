@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs & reports (generated at runtime)
+logs/*.json
+reports/report.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+# sample_events.json is intentionally committed — it is synthetic data
+# with no real users or sensitive information, and serves as the built-in
+# dataset for anyone cloning this project.
+# If you add real production data, exclude it here:
+# data/production_*.json
+# data/real_*.json
+
+# Secrets
+*.env
+.env
+config.local.yaml

@@ -1,0 +1,24 @@
+2026-05-28 06:56:08 | INFO | ============================================================
+2026-05-28 06:56:08 | INFO | AiSecPulse — AI Security Detection Pipeline
+2026-05-28 06:56:08 | INFO | ============================================================
+2026-05-28 06:56:08 | INFO | Configuration loaded
+2026-05-28 06:56:08 | INFO | ── Phase 1: ETL ──────────────────────────────────────────
+2026-05-28 06:56:08 | INFO | Loading events from: data/sample_events.json
+2026-05-28 06:56:08 | INFO | Loaded 96 raw events
+2026-05-28 06:59:07 | INFO | ============================================================
+2026-05-28 06:59:07 | INFO | AiSecPulse — AI Security Detection Pipeline
+2026-05-28 06:59:07 | INFO | ============================================================
+2026-05-28 06:59:07 | INFO | Configuration loaded
+2026-05-28 06:59:07 | INFO | ── Phase 1: ETL ──────────────────────────────────────────
+2026-05-28 06:59:07 | INFO | Loading events from: data/sample_events.json
+2026-05-28 06:59:07 | INFO | Loaded 96 raw events
+2026-05-28 06:59:07 | INFO | Normalization complete — 96 valid events, 0 skipped
+2026-05-28 06:59:07 | INFO | Total events   : 96
+2026-05-28 06:59:07 | INFO |   Chat         : 58
+2026-05-28 06:59:07 | INFO |   Agent        : 38
+2026-05-28 06:59:07 | INFO |   Normal       : 55
+2026-05-28 06:59:07 | INFO |   Injection    : 41
+2026-05-28 06:59:07 | INFO | Phase 1 complete ✓
+2026-05-28 06:59:07 | INFO | ── Phase 2: Feature Engineering — coming next ────────────
+2026-05-28 06:59:07 | INFO | ── Phase 3: Detection Engine — coming next ───────────────
+2026-05-28 06:59:07 | INFO | ── Phase 4: Alerts + Report — coming next ────────────────
