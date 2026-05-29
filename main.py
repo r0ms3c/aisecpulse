@@ -5,7 +5,7 @@ Entry point for the AiSecPulse detection pipeline.
 
 Runs the full pipeline in order:
   Phase 1 — ETL       : Load and normalize events
-  Phase 2 — Features  : Extract features per event        (coming next)
+  Phase 2 — Features  : Extract features per event
   Phase 3 — Detection : Run rule + anomaly detectors      (coming next)
   Phase 4 — Output    : Generate alerts and HTML report   (coming next)
 
@@ -17,13 +17,14 @@ import sys
 import yaml
 from loguru import logger
 
-from etl.ingest    import load_events
-from etl.normalize import normalize_events
+from etl.ingest         import load_events
+from etl.normalize      import normalize_events
+from features.extractor import FeatureExtractor
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 # Two handlers:
-#   1. stdout  — so you can see output in the terminal while developing
-#   2. log file — so detections are persisted in logs/detections.log
+#   1. stdout  — visible in terminal while developing
+#   2. log file — persisted to logs/detections.log
 # When the project is finished, handler 1 can be removed to run silently.
 logger.remove()
 logger.add(
@@ -33,8 +34,8 @@ logger.add(
 logger.add(
     "logs/detections.log",
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
-    rotation="1 MB",     # start a new file when it reaches 1 MB
-    retention="7 days",  # keep logs for 7 days then delete
+    rotation="1 MB",
+    retention="7 days",
     encoding="utf-8"
 )
 
@@ -60,7 +61,6 @@ def main():
     raw_events = load_events(config["data"]["sample_file"])
     events     = normalize_events(raw_events)
 
-    # Summary breakdown
     chat_events      = [e for e in events if e.type == "chat"]
     agent_events     = [e for e in events if e.type == "agent"]
     normal_events    = [e for e in events if e.label == "normal"]
@@ -74,8 +74,31 @@ def main():
     logger.info("Phase 1 complete ✓")
 
     # ── Phase 2: Feature Engineering ─────────────────────────────────────────
-    # TODO: Will be implemented in Phase 2
-    logger.info("── Phase 2: Feature Engineering — coming next ────────────")
+    logger.info("── Phase 2: Feature Engineering ──────────────────────────")
+
+    extractor     = FeatureExtractor(config)
+    all_features  = extractor.extract_all(events)
+
+    # Print a sample — first 3 normal and first 3 injection events
+    logger.info("Sample feature vectors (normal events):")
+    normal_indices = [i for i, e in enumerate(events) if e.label == "normal"][:3]
+    for i in normal_indices:
+        f = all_features[i]
+        logger.info(
+            f"  [{events[i].user_id}] vector={f.to_vector()} "
+            f"label={events[i].label}"
+        )
+
+    logger.info("Sample feature vectors (injection events):")
+    injection_indices = [i for i, e in enumerate(events) if e.label == "injection"][:3]
+    for i in injection_indices:
+        f = all_features[i]
+        logger.info(
+            f"  [{events[i].user_id}] vector={f.to_vector()} "
+            f"label={events[i].label}"
+        )
+
+    logger.info("Phase 2 complete ✓")
 
     # ── Phase 3: Detection Engine ─────────────────────────────────────────────
     # TODO: Will be implemented in Phase 3
