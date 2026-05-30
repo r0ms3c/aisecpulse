@@ -17,6 +17,7 @@ import sys
 import yaml
 from loguru import logger
 
+from detectors.anomaly import AnomalyDetector
 from etl.ingest         import load_events
 from etl.normalize      import normalize_events
 from features.extractor import FeatureExtractor
@@ -109,7 +110,12 @@ def main():
     rules_detector = RulesDetector(config)
     rule_results   = rules_detector.evaluate_all(all_features)
 
+    anomaly_detector = AnomalyDetector(config)
+    anomaly_detector.fit(all_features)
+    anomaly_scores = anomaly_detector.predict(all_features)
+
     logger.info(f"rule_results: {rule_results}")
+    logger.info(f"anomaly_scores: {anomaly_scores}")
 
     # ── Phase 4: Alerts + Report ──────────────────────────────────────────────
     # TODO: Will be implemented in Phase 4
