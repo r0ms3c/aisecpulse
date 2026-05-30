@@ -20,6 +20,7 @@ from loguru import logger
 from etl.ingest         import load_events
 from etl.normalize      import normalize_events
 from features.extractor import FeatureExtractor
+from detectors.rules       import RulesDetector
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 # Two handlers:
@@ -102,7 +103,13 @@ def main():
 
     # ── Phase 3: Detection Engine ─────────────────────────────────────────────
     # TODO: Will be implemented in Phase 3
-    logger.info("── Phase 3: Detection Engine — coming next ───────────────")
+    logger.info("── Phase 3: Detection Engine ───────────────")
+    
+    # Layer 1 — Rules
+    rules_detector = RulesDetector(config)
+    rule_results   = rules_detector.evaluate_all(all_features)
+
+    logger.info(f"rule_results: {rule_results}")
 
     # ── Phase 4: Alerts + Report ──────────────────────────────────────────────
     # TODO: Will be implemented in Phase 4
