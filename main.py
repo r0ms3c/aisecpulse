@@ -6,7 +6,7 @@ Entry point for the AiSecPulse detection pipeline.
 Runs the full pipeline in order:
   Phase 1 — ETL       : Load and normalize events
   Phase 2 — Features  : Extract features per event
-  Phase 3 — Detection : Run rule + anomaly detectors      (coming next)
+  Phase 3 — Detection : Run rule + anomaly detectors
   Phase 4 — Output    : Generate alerts and HTML report   (coming next)
 
 Usage:
@@ -17,17 +17,14 @@ import sys
 import yaml
 from loguru import logger
 
-from detectors.anomaly import AnomalyDetector
-from etl.ingest         import load_events
-from etl.normalize      import normalize_events
-from features.extractor import FeatureExtractor
+from etl.ingest            import load_events
+from etl.normalize         import normalize_events
+from features.extractor    import FeatureExtractor
 from detectors.rules       import RulesDetector
+from detectors.anomaly     import AnomalyDetector
+from detectors.scorer      import Scorer
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
-# Two handlers:
-#   1. stdout  — visible in terminal while developing
-#   2. log file — persisted to logs/detections.log
-# When the project is finished, handler 1 can be removed to run silently.
 logger.remove()
 logger.add(
     sys.stdout,
@@ -43,7 +40,6 @@ logger.add(
 
 
 def load_config(path: str = "config.yaml") -> dict:
-    """Load configuration from config.yaml."""
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -53,69 +49,50 @@ def main():
     logger.info("AiSecPulse — AI Security Detection Pipeline")
     logger.info("=" * 60)
 
-    # ── Load configuration ────────────────────────────────────────────────────
     config = load_config()
     logger.info("Configuration loaded")
 
     # ── Phase 1: ETL ──────────────────────────────────────────────────────────
     logger.info("── Phase 1: ETL ──────────────────────────────────────────")
-
     raw_events = load_events(config["data"]["sample_file"])
     events     = normalize_events(raw_events)
-
-    chat_events      = [e for e in events if e.type == "chat"]
-    agent_events     = [e for e in events if e.type == "agent"]
-    normal_events    = [e for e in events if e.label == "normal"]
-    injection_events = [e for e in events if e.label == "injection"]
-
-    logger.info(f"Total events   : {len(events)}")
-    logger.info(f"  Chat         : {len(chat_events)}")
-    logger.info(f"  Agent        : {len(agent_events)}")
-    logger.info(f"  Normal       : {len(normal_events)}")
-    logger.info(f"  Injection    : {len(injection_events)}")
+    logger.info(f"Total events: {len(events)} "
+                f"(chat={sum(1 for e in events if e.type=='chat')} "
+                f"agent={sum(1 for e in events if e.type=='agent')})")
     logger.info("Phase 1 complete ✓")
 
     # ── Phase 2: Feature Engineering ─────────────────────────────────────────
     logger.info("── Phase 2: Feature Engineering ──────────────────────────")
-
-    extractor     = FeatureExtractor(config)
-    all_features  = extractor.extract_all(events)
-
-    # Print a sample — first 3 normal and first 3 injection events
-    logger.info("Sample feature vectors (normal events):")
-    normal_indices = [i for i, e in enumerate(events) if e.label == "normal"][:3]
-    for i in normal_indices:
-        f = all_features[i]
-        logger.info(
-            f"  [{events[i].user_id}] vector={f.to_vector()} "
-            f"label={events[i].label}"
-        )
-
-    logger.info("Sample feature vectors (injection events):")
-    injection_indices = [i for i, e in enumerate(events) if e.label == "injection"][:3]
-    for i in injection_indices:
-        f = all_features[i]
-        logger.info(
-            f"  [{events[i].user_id}] vector={f.to_vector()} "
-            f"label={events[i].label}"
-        )
-
+    extractor    = FeatureExtractor(config)
+    all_features = extractor.extract_all(events)
     logger.info("Phase 2 complete ✓")
 
     # ── Phase 3: Detection Engine ─────────────────────────────────────────────
-    # TODO: Will be implemented in Phase 3
-    logger.info("── Phase 3: Detection Engine ───────────────")
-    
+    logger.info("── Phase 3: Detection Engine ─────────────────────────────")
+
     # Layer 1 — Rules
     rules_detector = RulesDetector(config)
     rule_results   = rules_detector.evaluate_all(all_features)
 
+    # Layer 2 — Anomaly
     anomaly_detector = AnomalyDetector(config)
     anomaly_detector.fit(all_features)
     anomaly_scores = anomaly_detector.predict(all_features)
 
-    logger.info(f"rule_results: {rule_results}")
-    logger.info(f"anomaly_scores: {anomaly_scores}")
+    # Layer 3 — Scorer
+    scorer  = Scorer(config)
+    results = scorer.score_all(rule_results, anomaly_scores)
+
+    # Print sample detections — alerts only
+    logger.info("── Detection Results (alerts only) ───────────────────────")
+    alerts = [(events[i], results[i]) for i in range(len(results)) if results[i].alert]
+    for event, result in alerts[:10]:  # show first 10 alerts
+        logger.info(
+            f"  [{result.severity}] {event.type} | {event.user_id} | "
+            f"score={result.final_score} | rules={result.reasons}"
+        )
+    logger.info(f"  ... {len(alerts)} total alerts raised")
+    logger.info("Phase 3 complete ✓")
 
     # ── Phase 4: Alerts + Report ──────────────────────────────────────────────
     # TODO: Will be implemented in Phase 4
