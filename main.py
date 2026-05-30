@@ -7,7 +7,7 @@ Runs the full pipeline in order:
   Phase 1 — ETL       : Load and normalize events
   Phase 2 — Features  : Extract features per event
   Phase 3 — Detection : Run rule + anomaly detectors
-  Phase 4 — Output    : Generate alerts and HTML report   (coming next)
+  Phase 4 — Output    : Generate alerts and HTML report
 
 Usage:
     python3 main.py
@@ -23,8 +23,12 @@ from features.extractor    import FeatureExtractor
 from detectors.rules       import RulesDetector
 from detectors.anomaly     import AnomalyDetector
 from detectors.scorer      import Scorer
+from alerts.alerting       import AlertGenerator
+from reports.generator     import ReportGenerator
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
+# stdout  — visible in terminal while developing
+# log file — persisted to logs/detections.log
 logger.remove()
 logger.add(
     sys.stdout,
@@ -56,9 +60,11 @@ def main():
     logger.info("── Phase 1: ETL ──────────────────────────────────────────")
     raw_events = load_events(config["data"]["sample_file"])
     events     = normalize_events(raw_events)
-    logger.info(f"Total events: {len(events)} "
-                f"(chat={sum(1 for e in events if e.type=='chat')} "
-                f"agent={sum(1 for e in events if e.type=='agent')})")
+    logger.info(
+        f"Total events: {len(events)} "
+        f"(chat={sum(1 for e in events if e.type=='chat')} "
+        f"agent={sum(1 for e in events if e.type=='agent')})"
+    )
     logger.info("Phase 1 complete ✓")
 
     # ── Phase 2: Feature Engineering ─────────────────────────────────────────
@@ -70,33 +76,30 @@ def main():
     # ── Phase 3: Detection Engine ─────────────────────────────────────────────
     logger.info("── Phase 3: Detection Engine ─────────────────────────────")
 
-    # Layer 1 — Rules
-    rules_detector = RulesDetector(config)
-    rule_results   = rules_detector.evaluate_all(all_features)
+    rules_detector   = RulesDetector(config)
+    rule_results     = rules_detector.evaluate_all(all_features)
 
-    # Layer 2 — Anomaly
     anomaly_detector = AnomalyDetector(config)
     anomaly_detector.fit(all_features)
-    anomaly_scores = anomaly_detector.predict(all_features)
+    anomaly_scores   = anomaly_detector.predict(all_features)
 
-    # Layer 3 — Scorer
     scorer  = Scorer(config)
     results = scorer.score_all(rule_results, anomaly_scores)
-
-    # Print sample detections — alerts only
-    logger.info("── Detection Results (alerts only) ───────────────────────")
-    alerts = [(events[i], results[i]) for i in range(len(results)) if results[i].alert]
-    for event, result in alerts[:10]:  # show first 10 alerts
-        logger.info(
-            f"  [{result.severity}] {event.type} | {event.user_id} | "
-            f"score={result.final_score} | rules={result.reasons}"
-        )
-    logger.info(f"  ... {len(alerts)} total alerts raised")
     logger.info("Phase 3 complete ✓")
 
     # ── Phase 4: Alerts + Report ──────────────────────────────────────────────
-    # TODO: Will be implemented in Phase 4
-    logger.info("── Phase 4: Alerts + Report — coming next ────────────────")
+    logger.info("── Phase 4: Alerts + Report ──────────────────────────────")
+
+    alert_gen = AlertGenerator(config)
+    alerts    = alert_gen.generate_all(events, results)
+
+    report_gen   = ReportGenerator(config)
+    report_path  = report_gen.generate(events, results, alerts)
+
+    logger.info("=" * 60)
+    logger.info(f"Pipeline complete — {len(alerts)} alerts raised")
+    logger.info(f"Report → {report_path}")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":
